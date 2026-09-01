@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="OVERVIEW.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="kc.lms.client/kc.lms.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="KC.LMS.Server/KC.LMS.Server.csproj" />
+  <Project Path="KC.LMS.Storage/KC.LMS.Storage.csproj" />
+</Solution>
