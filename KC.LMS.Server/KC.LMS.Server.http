@@ -1,0 +1,35 @@
+@KC.LMS.Server_HostAddress = http://localhost:5258
+
+GET {{KC.LMS.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+POST {{KC.LMS.Server_HostAddress}}/auth/register
+Content-Type: application/json
+
+{
+  "tenantSlug": "acme",
+  "email": "jane@acme.test",
+  "userName": "jane",
+  "password": "P@ssw0rd!",
+  "displayName": "Jane Doe"
+}
+
+###
+
+POST {{KC.LMS.Server_HostAddress}}/auth/login
+Content-Type: application/json
+
+{
+  "tenantSlug": "acme",
+  "email": "jane@acme.test",
+  "password": "P@ssw0rd!"
+}
+
+###
+
+POST {{KC.LMS.Server_HostAddress}}/auth/logout
+Authorization: Bearer {{authToken}}
+
+###
