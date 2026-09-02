@@ -46,6 +46,7 @@ public class AuthService(ApplicationDbContext dbContext, ILogger<AuthService> lo
         var user = await dbContext.Users
             .IgnoreQueryFilters()
             .Include(u => u.UserAccesses)
+            .ThenInclude(a => a.Role)
             .SingleOrDefaultAsync(u => u.Tenant!.Slug == request.TenantSlug && u.Email == request.Email, cancellationToken);
 
         if (user is null || !user.IsActive || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
@@ -56,12 +57,12 @@ public class AuthService(ApplicationDbContext dbContext, ILogger<AuthService> lo
         user.LastLoginAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var roles = user.UserAccesses
-            .Where(a => a.RevokedAt is null)
-            .Select(a => a.Role)
+        var grants = user.UserAccesses
+            .Where(a => a.RevokedAt is null && a.Role is { IsActive: true })
+            .Select(a => new RoleGrant(a.Role!.Name, a.ScopeType, a.ScopeId))
             .Distinct()
             .ToList();
 
-        return new AuthUserResult(user.Id, user.TenantId, user.Email, user.UserName, user.DisplayName, roles);
+        return new AuthUserResult(user.Id, user.TenantId, user.Email, user.UserName, user.DisplayName, grants);
     }
 }
