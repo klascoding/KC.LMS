@@ -24,6 +24,7 @@ public interface IJwtTokenService
 public class JwtTokenService(Microsoft.Extensions.Options.IOptions<JwtOptions> options) : IJwtTokenService
 {
     public const string TenantIdClaim = "tenant_id";
+    public const string ScopeClaim = "scope";
 
     private readonly JwtOptions _options = options.Value;
 
@@ -39,7 +40,20 @@ public class JwtTokenService(Microsoft.Extensions.Options.IOptions<JwtOptions> o
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(TenantIdClaim, user.TenantId.ToString()),
         ];
-        claims.AddRange(user.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+        foreach (var grant in user.Grants)
+        {
+            if (grant.ScopeType == KC.LMS.Storage.Entities.AccessScopeType.Tenant)
+            {
+                // Tenant-wide grants map to standard role claims for [Authorize(Roles = ...)].
+                claims.Add(new Claim(ClaimTypes.Role, grant.RoleName));
+            }
+            else
+            {
+                // Scoped grants: "{role}:{scopeType}:{scopeId}", e.g. "OrgManager:Organization:<guid>".
+                claims.Add(new Claim(ScopeClaim, $"{grant.RoleName}:{grant.ScopeType}:{grant.ScopeId}"));
+            }
+        }
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey)),

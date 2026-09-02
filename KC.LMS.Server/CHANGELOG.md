@@ -11,3 +11,4 @@ The following steps were used to generate this project:
 
 - Added multi-tenant storage model in `KC.LMS.Storage` (Tenant, Organization, User, UserAccess, Employee, Department, Position) with EF Core (PostgreSQL) and TenantId global query filters.
 - Added JWT-based authentication: `AuthController` (`/auth/register`, `/auth/login`, `/auth/logout`), bcrypt password hashing, and tenant resolution from the `tenant_id` JWT claim.
+- Normalized role model: new `Role` entity, `UserAccess` reworked to scoped assignments (`RoleId`, `ScopeType`, `ScopeId`). Tenant-wide grants map to JWT `role` claims; scoped grants to `scope` claims (`{role}:{scopeType}:{scopeId}`). Added `OrgManagerOfRoute` sample authorization policy.

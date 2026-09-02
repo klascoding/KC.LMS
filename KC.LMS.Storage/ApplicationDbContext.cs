@@ -11,6 +11,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserAccess> UserAccesses => Set<UserAccess>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Department> Departments => Set<Department>();
@@ -45,11 +46,25 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             b.HasQueryFilter(u => u.TenantId == _tenantProvider.TenantId);
         });
 
+        modelBuilder.Entity<Role>(b =>
+        {
+            b.Property(r => r.Name).HasMaxLength(128).IsRequired();
+            b.HasIndex(r => new { r.TenantId, r.Name }).IsUnique();
+            b.HasOne(r => r.Tenant).WithMany().HasForeignKey(r => r.TenantId);
+            // System roles (TenantId == null) are visible to every tenant.
+            b.HasQueryFilter(r => r.TenantId == null || r.TenantId == _tenantProvider.TenantId);
+            b.HasData(
+                new Role { Id = Guid.Parse("6e5a1f5e-0b8a-4f8e-9e2a-000000000001"), Name = RoleNames.TenantAdmin, Description = "Full access within the tenant." },
+                new Role { Id = Guid.Parse("6e5a1f5e-0b8a-4f8e-9e2a-000000000002"), Name = RoleNames.OrgManager, Description = "Manages an organization." },
+                new Role { Id = Guid.Parse("6e5a1f5e-0b8a-4f8e-9e2a-000000000003"), Name = RoleNames.Instructor, Description = "Delivers courses." },
+                new Role { Id = Guid.Parse("6e5a1f5e-0b8a-4f8e-9e2a-000000000004"), Name = RoleNames.Learner, Description = "Consumes courses." });
+        });
+
         modelBuilder.Entity<UserAccess>(b =>
         {
-            b.Property(a => a.Role).HasMaxLength(128).IsRequired();
             b.HasOne(a => a.User).WithMany(u => u.UserAccesses).HasForeignKey(a => a.UserId);
-            b.HasIndex(a => new { a.TenantId, a.UserId, a.Role });
+            b.HasOne(a => a.Role).WithMany(r => r.UserAccesses).HasForeignKey(a => a.RoleId);
+            b.HasIndex(a => new { a.TenantId, a.UserId, a.RoleId, a.ScopeType, a.ScopeId }).IsUnique();
             b.HasQueryFilter(a => a.TenantId == _tenantProvider.TenantId);
         });
 

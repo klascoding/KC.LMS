@@ -48,7 +48,17 @@ namespace KC.LMS.Server
                         ValidateLifetime = true,
                     };
                 });
-            builder.Services.AddAuthorization();
+            builder.Services.AddAuthorization(options =>
+            {
+                // Sample scoped policy: user must be OrgManager of the org in route value "organizationId",
+                // hold OrgManager tenant-wide, or be TenantAdmin.
+                options.AddPolicy("OrgManagerOfRoute", policy =>
+                    policy.AddRequirements(new Authorization.ScopeRequirement(
+                        KC.LMS.Storage.Entities.RoleNames.OrgManager,
+                        KC.LMS.Storage.Entities.AccessScopeType.Organization,
+                        "organizationId")));
+            });
+            builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Authorization.ScopeAuthorizationHandler>();
 
             var app = builder.Build();
 
