@@ -1,8 +1,10 @@
+using KC.LMS.Service.Models;
+using KC.LMS.Storage;
 using KC.LMS.Storage.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace KC.LMS.Storage.Services;
+namespace KC.LMS.Service;
 
 public class AuthService(ApplicationDbContext dbContext, ILogger<AuthService> logger) : IAuthService
 {

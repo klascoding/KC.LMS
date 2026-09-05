@@ -2,22 +2,24 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
-    <PackageReference Include="MSTest" Version="4.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\KC.LMS.Storage\KC.LMS.Storage.csproj" />
     <ProjectReference Include="..\KC.LMS.Service\KC.LMS.Service.csproj" />
   </ItemGroup>
 

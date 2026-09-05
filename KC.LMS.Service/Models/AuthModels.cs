@@ -1,6 +1,6 @@
 using KC.LMS.Storage.Entities;
 
-namespace KC.LMS.Storage.Services;
+namespace KC.LMS.Service.Models;
 
 public record RegisterRequest(string TenantSlug, string Email, string UserName, string Password, string? DisplayName);
 

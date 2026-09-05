@@ -1,24 +1,21 @@
-using KC.LMS.Service;
+using KC.LMS.Service.Models;
+using KC.LMS.Storage;
+using KC.LMS.Storage.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace KC.LMS.Storage.Test;
+namespace KC.LMS.Service.Test;
 
-[TestClass]
-public sealed class AuthServiceTests
+public sealed class AuthServiceTests : IDisposable
 {
-    private SqliteDbFixture _fixture = null!;
+    private readonly SqliteDbFixture _fixture = new();
 
-    [TestInitialize]
-    public void Initialize() => _fixture = new SqliteDbFixture();
+    public void Dispose() => _fixture.Dispose();
 
-    [TestCleanup]
-    public void Cleanup() => _fixture.Dispose();
+    private IAuthService CreateService(ApplicationDbContext context) =>
+        new AuthService(context, NullLogger<AuthService>.Instance);
 
-    private AuthService CreateService(ApplicationDbContext context) =>
-        new(context, NullLogger<AuthService>.Instance);
-
-    [TestMethod]
+    [Fact]
     public async Task RegisterAsync_WithValidTenant_CreatesUserWithBcryptHash()
     {
         var tenant = _fixture.SeedTenant("acme");
@@ -28,16 +25,16 @@ public sealed class AuthServiceTests
         var result = await service.RegisterAsync(
             new RegisterRequest("acme", "jane@acme.test", "jane", "P@ssw0rd!", "Jane"), CancellationToken.None);
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual(tenant.Id, result.TenantId);
-        Assert.AreEqual("jane@acme.test", result.Email);
+        Assert.NotNull(result);
+        Assert.Equal(tenant.Id, result.TenantId);
+        Assert.Equal("jane@acme.test", result.Email);
 
         var user = context.Users.IgnoreQueryFilters().Single(u => u.Id == result.UserId);
-        Assert.AreNotEqual("P@ssw0rd!", user.PasswordHash);
-        Assert.IsTrue(BCrypt.Net.BCrypt.Verify("P@ssw0rd!", user.PasswordHash));
+        Assert.NotEqual("P@ssw0rd!", user.PasswordHash);
+        Assert.True(BCrypt.Net.BCrypt.Verify("P@ssw0rd!", user.PasswordHash));
     }
 
-    [TestMethod]
+    [Fact]
     public async Task RegisterAsync_WithUnknownTenant_ReturnsNull()
     {
         await using var context = _fixture.CreateContext();
@@ -46,10 +43,10 @@ public sealed class AuthServiceTests
         var result = await service.RegisterAsync(
             new RegisterRequest("nope", "jane@acme.test", "jane", "P@ssw0rd!", null), CancellationToken.None);
 
-        Assert.IsNull(result);
+        Assert.Null(result);
     }
 
-    [TestMethod]
+    [Fact]
     public async Task RegisterAsync_WithDuplicateEmail_ReturnsNull()
     {
         _fixture.SeedTenant("acme");
@@ -61,11 +58,27 @@ public sealed class AuthServiceTests
         var duplicate = await service.RegisterAsync(
             new RegisterRequest("acme", "jane@acme.test", "jane2", "Other1!", null), CancellationToken.None);
 
-        Assert.IsNotNull(first);
-        Assert.IsNull(duplicate);
+        Assert.NotNull(first);
+        Assert.Null(duplicate);
     }
 
-    [TestMethod]
+    [Fact]
+    public async Task RegisterAsync_WithDuplicateUserName_ReturnsNull()
+    {
+        _fixture.SeedTenant("acme");
+        await using var context = _fixture.CreateContext();
+        var service = CreateService(context);
+
+        var first = await service.RegisterAsync(
+            new RegisterRequest("acme", "jane@acme.test", "jane", "P@ssw0rd!", null), CancellationToken.None);
+        var duplicate = await service.RegisterAsync(
+            new RegisterRequest("acme", "other@acme.test", "jane", "Other1!", null), CancellationToken.None);
+
+        Assert.NotNull(first);
+        Assert.Null(duplicate);
+    }
+
+    [Fact]
     public async Task LoginAsync_WithCorrectCredentials_ReturnsUserAndUpdatesLastLogin()
     {
         _fixture.SeedTenant("acme");
@@ -77,12 +90,12 @@ public sealed class AuthServiceTests
         var result = await service.LoginAsync(
             new LoginRequest("acme", "jane@acme.test", "P@ssw0rd!"), CancellationToken.None);
 
-        Assert.IsNotNull(result);
+        Assert.NotNull(result);
         var user = context.Users.IgnoreQueryFilters().Single(u => u.Id == result.UserId);
-        Assert.IsNotNull(user.LastLoginAt);
+        Assert.NotNull(user.LastLoginAt);
     }
 
-    [TestMethod]
+    [Fact]
     public async Task LoginAsync_WithWrongPassword_ReturnsNull()
     {
         _fixture.SeedTenant("acme");
@@ -94,36 +107,59 @@ public sealed class AuthServiceTests
         var result = await service.LoginAsync(
             new LoginRequest("acme", "jane@acme.test", "wrong"), CancellationToken.None);
 
-        Assert.IsNull(result);
+        Assert.Null(result);
     }
 
-    [TestMethod]
-    public async Task LoginAsync_ExcludesRevokedGrants()
+    [Fact]
+    public async Task LoginAsync_WithInactiveUser_ReturnsNull()
+    {
+        _fixture.SeedTenant("acme");
+        await using var context = _fixture.CreateContext();
+        var service = CreateService(context);
+        var registered = await service.RegisterAsync(
+            new RegisterRequest("acme", "jane@acme.test", "jane", "P@ssw0rd!", null), CancellationToken.None);
+        Assert.NotNull(registered);
+
+        var user = context.Users.IgnoreQueryFilters().Single(u => u.Id == registered.UserId);
+        user.IsActive = false;
+        await context.SaveChangesAsync();
+
+        var result = await service.LoginAsync(
+            new LoginRequest("acme", "jane@acme.test", "P@ssw0rd!"), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ReturnsActiveGrants_ExcludingRevoked()
     {
         var tenant = _fixture.SeedTenant("acme");
         await using var context = _fixture.CreateContext();
         var service = CreateService(context);
         var registered = await service.RegisterAsync(
             new RegisterRequest("acme", "jane@acme.test", "jane", "P@ssw0rd!", null), CancellationToken.None);
-        Assert.IsNotNull(registered);
+        Assert.NotNull(registered);
 
         _fixture.TenantProvider.TenantId = tenant.Id;
         var roles = context.Roles.ToDictionary(r => r.Name, r => r.Id);
+        var orgId = Guid.NewGuid();
         context.UserAccesses.AddRange(
-            new Entities.UserAccess
+            new UserAccess
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenant.Id,
                 UserId = registered.UserId,
-                RoleId = roles[Entities.RoleNames.Learner],
+                RoleId = roles[RoleNames.OrgManager],
+                ScopeType = AccessScopeType.Organization,
+                ScopeId = orgId,
                 GrantedAt = DateTimeOffset.UtcNow,
             },
-            new Entities.UserAccess
+            new UserAccess
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenant.Id,
                 UserId = registered.UserId,
-                RoleId = roles[Entities.RoleNames.TenantAdmin],
+                RoleId = roles[RoleNames.TenantAdmin],
                 GrantedAt = DateTimeOffset.UtcNow,
                 RevokedAt = DateTimeOffset.UtcNow,
             });
@@ -132,8 +168,10 @@ public sealed class AuthServiceTests
         var result = await service.LoginAsync(
             new LoginRequest("acme", "jane@acme.test", "P@ssw0rd!"), CancellationToken.None);
 
-        Assert.IsNotNull(result);
-        Assert.HasCount(1, result.Grants);
-        Assert.AreEqual(Entities.RoleNames.Learner, result.Grants[0].RoleName);
+        Assert.NotNull(result);
+        var grant = Assert.Single(result.Grants);
+        Assert.Equal(RoleNames.OrgManager, grant.RoleName);
+        Assert.Equal(AccessScopeType.Organization, grant.ScopeType);
+        Assert.Equal(orgId, grant.ScopeId);
     }
 }
