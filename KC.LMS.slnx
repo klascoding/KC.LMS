@@ -8,5 +8,7 @@
     <Deploy />
   </Project>
   <Project Path="KC.LMS.Server/KC.LMS.Server.csproj" />
+  <Project Path="KC.LMS.Service.Test/KC.LMS.Service.Test.csproj" Id="f9f27a05-e385-4519-9024-0410357be986" />
+  <Project Path="KC.LMS.Service/KC.LMS.Service.csproj" />
   <Project Path="KC.LMS.Storage/KC.LMS.Storage.csproj" />
 </Solution>

@@ -1,4 +1,6 @@
-namespace KC.LMS.Storage.Services;
+using KC.LMS.Service.Models;
+
+namespace KC.LMS.Service;
 
 public interface IAuthService
 {

@@ -1,8 +1,8 @@
 
 using System.Text;
 using KC.LMS.Server.Services;
+using KC.LMS.Service;
 using KC.LMS.Storage;
-using KC.LMS.Storage.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;

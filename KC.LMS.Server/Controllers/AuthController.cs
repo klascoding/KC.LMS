@@ -1,5 +1,7 @@
+using KC.LMS.Server.Models;
 using KC.LMS.Server.Services;
-using KC.LMS.Storage.Services;
+using KC.LMS.Service;
+using KC.LMS.Service.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +12,6 @@ namespace KC.LMS.Server.Controllers;
 public class AuthController(IAuthService authService, IJwtTokenService tokenService, ILogger<AuthController> logger)
     : ControllerBase
 {
-    public record AuthResponse(string Token, DateTimeOffset ExpiresAt, Guid UserId, string Email, string UserName);
 
     [HttpPost("register")]
     [AllowAnonymous]

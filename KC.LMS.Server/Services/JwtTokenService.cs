@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using KC.LMS.Storage.Services;
+using KC.LMS.Service.Models;
 using Microsoft.IdentityModel.Tokens;
 
 namespace KC.LMS.Server.Services;

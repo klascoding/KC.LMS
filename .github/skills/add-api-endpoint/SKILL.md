@@ -14,15 +14,15 @@ Use this skill when adding a new REST endpoint to KC.LMS.Server.
    - Inject dependencies (e.g., `ILogger<T>`, storage services) via constructor.
    - Every action is `async`, returns `ActionResult<T>`, and accepts a `CancellationToken`.
 
-2. **DTOs** — Define request/response models as C# records in the Server project (or shared models in `KC.LMS.Storage` if persisted).
+2. **DTOs** — Define request/response models as C# records in `KC.LMS.Service` (or in the Server project if purely presentational).
 
-3. **Storage** — Any data access goes through an interface + implementation in `KC.LMS.Storage`. Register it in `Program.cs` DI.
+3. **Business logic** — Service interfaces + implementations go in `KC.LMS.Service`. Data access stays behind `ApplicationDbContext` in `KC.LMS.Storage`. Register services in `Program.cs` DI.
 
 4. **HTTP samples** — Add example requests to `KC.LMS.Server/KC.LMS.Server.http`.
 
 5. **Changelog** — Add an entry to `KC.LMS.Server/CHANGELOG.md`.
 
-6. **Validate** — Run `dotnet build KC.LMS.slnx`.
+6. **Validate** — Run `dotnet build KC.LMS.slnx` and `dotnet test KC.LMS.Storage.Test`.
 
 ## Template
 
